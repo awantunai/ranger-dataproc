@@ -13,20 +13,14 @@
  */
 package org.apache.ranger.authorization.presto.authorizer;
 
-import io.prestosql.spi.connector.CatalogSchemaName;
-import io.prestosql.spi.connector.CatalogSchemaTableName;
-import io.prestosql.spi.connector.SchemaTableName;
-import io.prestosql.spi.security.AccessDeniedException;
-import io.prestosql.spi.security.SystemAccessControl;
-import io.prestosql.spi.security.SystemSecurityContext;
+import io.prestosql.spi.connector.*;
+import io.prestosql.spi.security.*;
+import io.prestosql.spi.type.Type;
 import org.apache.ranger.plugin.classloader.RangerPluginClassLoader;
 
 import javax.inject.Inject;
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class RangerSystemAccessControl
   implements SystemAccessControl {
@@ -51,6 +45,9 @@ public class RangerSystemAccessControl
         configMap.put("ranger.keytab", config.getKeytab());
         configMap.put("ranger.principal", config.getPrincipal());
       }
+
+      configMap.put("ranger.use_ugi", Boolean.toString(config.isUseUgi()));
+
       systemAccessControlImpl = cls.getDeclaredConstructor(Map.class).newInstance(configMap);
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -60,30 +57,12 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanSetUser(Optional<Principal> principal, String userName) {
-    try {
-      activatePluginClassLoader();
-      systemAccessControlImpl.checkCanSetUser(principal, userName);
-    } catch (AccessDeniedException e) {
-      deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denySetUser(principal, userName);
-    }
-  }
-
-  @Override
   public void checkCanSetSystemSessionProperty(SystemSecurityContext context, String propertyName) {
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanSetSystemSessionProperty(context, propertyName);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denySetSystemSessionProperty(propertyName);
     }
   }
 
@@ -92,18 +71,21 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanAccessCatalog(context, catalogName);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyCatalogAccess(catalogName);
     }
   }
 
   @Override
   public Set<String> filterCatalogs(SystemSecurityContext context, Set<String> catalogs) {
-    return catalogs;
+    Set<String> filteredCatalogs;
+    try {
+      activatePluginClassLoader();
+      filteredCatalogs = systemAccessControlImpl.filterCatalogs(context, catalogs);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return filteredCatalogs;
   }
 
   @Override
@@ -111,12 +93,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanCreateSchema(context, schema);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyCreateSchema(schema.getSchemaName());
     }
   }
 
@@ -125,12 +103,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanDropSchema(context, schema);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyDropSchema(schema.getSchemaName());
     }
   }
 
@@ -139,12 +113,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanRenameSchema(context, schema, newSchemaName);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyRenameSchema(schema.getSchemaName(), newSchemaName);
     }
   }
 
@@ -153,18 +123,21 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanShowSchemas(context, catalogName);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyShowSchemas();
     }
   }
 
   @Override
   public Set<String> filterSchemas(SystemSecurityContext context, String catalogName, Set<String> schemaNames) {
-    return schemaNames;
+    Set<String> filteredSchemas;
+    try {
+      activatePluginClassLoader();
+      filteredSchemas = systemAccessControlImpl.filterSchemas(context, catalogName, schemaNames);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return filteredSchemas;
   }
 
   @Override
@@ -172,12 +145,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanCreateTable(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyCreateTable(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -186,12 +155,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanDropTable(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyDropTable(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -200,18 +165,21 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanRenameTable(context, table, newTable);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyRenameTable(table.getSchemaTableName().getTableName(), newTable.getSchemaTableName().getTableName());
     }
   }
 
   @Override
   public Set<SchemaTableName> filterTables(SystemSecurityContext context, String catalogName, Set<SchemaTableName> tableNames) {
-    return tableNames;
+    Set<SchemaTableName> filteredTableNames;
+    try {
+      activatePluginClassLoader();
+      filteredTableNames = systemAccessControlImpl.filterTables(context, catalogName, tableNames);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return filteredTableNames;
   }
 
   @Override
@@ -219,12 +187,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanAddColumn(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyAddColumn(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -233,12 +197,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanDropColumn(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyDropColumn(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -247,12 +207,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanRenameColumn(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyRenameColumn(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -261,12 +217,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanSelectFromColumns(context, table, columns);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denySelectColumns(table.getSchemaTableName().getTableName(), columns);
     }
   }
 
@@ -275,12 +227,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanInsertIntoTable(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyInsertTable(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -289,12 +237,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanDeleteFromTable(context, table);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyDeleteTable(table.getSchemaTableName().getTableName());
     }
   }
 
@@ -303,12 +247,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanCreateView(context, view);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyCreateView(view.getSchemaTableName().getTableName());
     }
   }
 
@@ -317,12 +257,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanDropView(context, view);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyDropView(view.getSchemaTableName().getTableName());
     }
   }
 
@@ -331,12 +267,8 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanCreateViewWithSelectFromColumns(context, table, columns);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyCreateViewWithSelect(table.getSchemaTableName().getTableName(), context.getIdentity());
     }
   }
 
@@ -345,12 +277,236 @@ public class RangerSystemAccessControl
     try {
       activatePluginClassLoader();
       systemAccessControlImpl.checkCanSetCatalogSessionProperty(context, catalogName, propertyName);
-    } catch (AccessDeniedException e) {
+    } finally {
       deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
+    }
+  }
+
+  @Override
+  public void checkCanImpersonateUser(SystemSecurityContext context, String userName) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanImpersonateUser(context, userName);
+    } finally {
       deactivatePluginClassLoader();
-      AccessDeniedException.denySetCatalogSessionProperty(catalogName, propertyName);
+    }
+  }
+
+  @Override
+  public void checkCanExecuteQuery(SystemSecurityContext context) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanExecuteQuery(context);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanViewQueryOwnedBy(SystemSecurityContext context, String queryOwner) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanViewQueryOwnedBy(context, queryOwner);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public Set<String> filterViewQueryOwnedBy(SystemSecurityContext context, Set<String> queryOwners) {
+    Set<String> filteredQueryOwners;
+    try {
+      activatePluginClassLoader();
+      filteredQueryOwners = systemAccessControlImpl.filterViewQueryOwnedBy(context, queryOwners);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return filteredQueryOwners;
+  }
+
+  @Override
+  public void checkCanKillQueryOwnedBy(SystemSecurityContext context, String queryOwner) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanKillQueryOwnedBy(context, queryOwner);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanShowCreateTable(SystemSecurityContext context, CatalogSchemaTableName table) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanShowCreateTable(context, table);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanSetTableComment(SystemSecurityContext context, CatalogSchemaTableName table) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanSetTableComment(context, table);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanShowTables(SystemSecurityContext context, CatalogSchemaName schema) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanShowTables(context, schema);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanShowColumns(SystemSecurityContext context, CatalogSchemaTableName table) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanShowColumns(context, table);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public List<ColumnMetadata> filterColumns(SystemSecurityContext context, CatalogSchemaTableName table, List<ColumnMetadata> columns) {
+    List<ColumnMetadata> filteredColumns;
+    try {
+      activatePluginClassLoader();
+      filteredColumns = systemAccessControlImpl.filterColumns(context, table, columns);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return filteredColumns;
+  }
+
+  @Override
+  public void checkCanRenameView(SystemSecurityContext context, CatalogSchemaTableName view, CatalogSchemaTableName newView) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanRenameView(context, view, newView);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanGrantTablePrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal grantee, boolean withGrantOption) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanGrantTablePrivilege(context, privilege, table, grantee, withGrantOption);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanRevokeTablePrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal revokee, boolean grantOptionFor) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanRevokeTablePrivilege(context, privilege, table, revokee, grantOptionFor);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanShowRoles(SystemSecurityContext context, String catalogName) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanShowRoles(context, catalogName);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public Optional<ViewExpression> getRowFilter(SystemSecurityContext context, CatalogSchemaTableName tableName) {
+    Optional<ViewExpression> viewExpression;
+    try {
+      activatePluginClassLoader();
+      viewExpression = systemAccessControlImpl.getRowFilter(context, tableName);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return viewExpression;
+  }
+
+  @Override
+  public Optional<ViewExpression> getColumnMask(SystemSecurityContext context, CatalogSchemaTableName tableName, String columnName, Type type) {
+    Optional<ViewExpression> viewExpression;
+    try {
+      activatePluginClassLoader();
+      viewExpression = systemAccessControlImpl.getColumnMask(context, tableName, columnName, type);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+    return viewExpression;
+  }
+
+  @Override
+  public void checkCanSetUser(Optional<Principal> principal, String userName) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanSetUser(principal, userName);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanGrantExecuteFunctionPrivilege(SystemSecurityContext context, String functionName, PrestoPrincipal grantee, boolean grantOption) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanGrantExecuteFunctionPrivilege(context, functionName, grantee, grantOption);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanSetSchemaAuthorization(SystemSecurityContext context, CatalogSchemaName schema, PrestoPrincipal principal) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanSetSchemaAuthorization(context, schema, principal);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanShowCreateSchema(SystemSecurityContext context, CatalogSchemaName schemaName) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanShowCreateSchema(context, schemaName);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanExecuteProcedure(SystemSecurityContext systemSecurityContext, CatalogSchemaRoutineName procedure) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanExecuteProcedure(systemSecurityContext, procedure);
+    } finally {
+      deactivatePluginClassLoader();
+    }
+  }
+
+  @Override
+  public void checkCanExecuteFunction(SystemSecurityContext systemSecurityContext, String functionName) {
+    try {
+      activatePluginClassLoader();
+      systemAccessControlImpl.checkCanExecuteFunction(systemSecurityContext, functionName);
+    } finally {
+      deactivatePluginClassLoader();
     }
   }
 

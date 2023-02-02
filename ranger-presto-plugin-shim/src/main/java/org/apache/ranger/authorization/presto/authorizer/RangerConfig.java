@@ -25,6 +25,8 @@ public class RangerConfig {
   private String keytab;
   private String principal;
 
+  private boolean useUgi = false;
+
   public String getKeytab() { return keytab; }
 
   @Config("ranger.keytab")
@@ -42,6 +44,16 @@ public class RangerConfig {
   @SuppressWarnings("unused")
   public RangerConfig setPrincipal(String principal) {
     this.principal = principal;
+    return this;
+  }
+
+  public boolean isUseUgi() { return useUgi; }
+
+  @Config("ranger.use_ugi")
+  @ConfigDescription("Use Hadoop User Group Information instead of Presto groups")
+  @SuppressWarnings("unused")
+  public RangerConfig setUseUgi(boolean useUgi) {
+    this.useUgi = useUgi;
     return this;
   }
 }
