@@ -945,7 +945,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.3</version>
+                    <version>3.10.1</version>
                     <configuration>
                         <useIncrementalCompilation>false</useIncrementalCompilation>
                         <source>${javac.source.version}</source>
