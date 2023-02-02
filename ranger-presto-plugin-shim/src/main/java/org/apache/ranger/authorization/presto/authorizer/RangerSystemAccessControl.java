@@ -17,8 +17,8 @@ import io.prestosql.spi.connector.CatalogSchemaName;
 import io.prestosql.spi.connector.CatalogSchemaTableName;
 import io.prestosql.spi.connector.SchemaTableName;
 import io.prestosql.spi.security.AccessDeniedException;
-import io.prestosql.spi.security.Identity;
 import io.prestosql.spi.security.SystemAccessControl;
+import io.prestosql.spi.security.SystemSecurityContext;
 import org.apache.ranger.plugin.classloader.RangerPluginClassLoader;
 
 import javax.inject.Inject;
@@ -74,10 +74,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanSetSystemSessionProperty(Identity identity, String propertyName) {
+  public void checkCanSetSystemSessionProperty(SystemSecurityContext context, String propertyName) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanSetSystemSessionProperty(identity, propertyName);
+      systemAccessControlImpl.checkCanSetSystemSessionProperty(context, propertyName);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -88,10 +88,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanAccessCatalog(Identity identity, String catalogName) {
+  public void checkCanAccessCatalog(SystemSecurityContext context, String catalogName) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanAccessCatalog(identity, catalogName);
+      systemAccessControlImpl.checkCanAccessCatalog(context, catalogName);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -102,15 +102,15 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public Set<String> filterCatalogs(Identity identity, Set<String> catalogs) {
+  public Set<String> filterCatalogs(SystemSecurityContext context, Set<String> catalogs) {
     return catalogs;
   }
 
   @Override
-  public void checkCanCreateSchema(Identity identity, CatalogSchemaName schema) {
+  public void checkCanCreateSchema(SystemSecurityContext context, CatalogSchemaName schema) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanCreateSchema(identity, schema);
+      systemAccessControlImpl.checkCanCreateSchema(context, schema);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -121,10 +121,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanDropSchema(Identity identity, CatalogSchemaName schema) {
+  public void checkCanDropSchema(SystemSecurityContext context, CatalogSchemaName schema) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanDropSchema(identity, schema);
+      systemAccessControlImpl.checkCanDropSchema(context, schema);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -135,10 +135,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanRenameSchema(Identity identity, CatalogSchemaName schema, String newSchemaName) {
+  public void checkCanRenameSchema(SystemSecurityContext context, CatalogSchemaName schema, String newSchemaName) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanRenameSchema(identity, schema, newSchemaName);
+      systemAccessControlImpl.checkCanRenameSchema(context, schema, newSchemaName);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -149,10 +149,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanShowSchemas(Identity identity, String catalogName) {
+  public void checkCanShowSchemas(SystemSecurityContext context, String catalogName) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanShowSchemas(identity, catalogName);
+      systemAccessControlImpl.checkCanShowSchemas(context, catalogName);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -163,15 +163,15 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public Set<String> filterSchemas(Identity identity, String catalogName, Set<String> schemaNames) {
+  public Set<String> filterSchemas(SystemSecurityContext context, String catalogName, Set<String> schemaNames) {
     return schemaNames;
   }
 
   @Override
-  public void checkCanCreateTable(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanCreateTable(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanCreateTable(identity, table);
+      systemAccessControlImpl.checkCanCreateTable(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -182,10 +182,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanDropTable(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanDropTable(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanDropTable(identity, table);
+      systemAccessControlImpl.checkCanDropTable(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -196,10 +196,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanRenameTable(Identity identity, CatalogSchemaTableName table, CatalogSchemaTableName newTable) {
+  public void checkCanRenameTable(SystemSecurityContext context, CatalogSchemaTableName table, CatalogSchemaTableName newTable) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanRenameTable(identity, table, newTable);
+      systemAccessControlImpl.checkCanRenameTable(context, table, newTable);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -210,29 +210,15 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanShowTablesMetadata(Identity identity, CatalogSchemaName schema) {
-    try {
-      activatePluginClassLoader();
-      systemAccessControlImpl.checkCanShowTablesMetadata(identity, schema);
-    } catch (AccessDeniedException e) {
-      deactivatePluginClassLoader();
-      throw e;
-    } catch (Exception e) {
-      deactivatePluginClassLoader();
-      AccessDeniedException.denyShowTablesMetadata(schema.getSchemaName());
-    }
-  }
-
-  @Override
-  public Set<SchemaTableName> filterTables(Identity identity, String catalogName, Set<SchemaTableName> tableNames) {
+  public Set<SchemaTableName> filterTables(SystemSecurityContext context, String catalogName, Set<SchemaTableName> tableNames) {
     return tableNames;
   }
 
   @Override
-  public void checkCanAddColumn(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanAddColumn(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanAddColumn(identity, table);
+      systemAccessControlImpl.checkCanAddColumn(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -243,10 +229,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanDropColumn(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanDropColumn(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanDropColumn(identity, table);
+      systemAccessControlImpl.checkCanDropColumn(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -257,10 +243,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanRenameColumn(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanRenameColumn(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanRenameColumn(identity, table);
+      systemAccessControlImpl.checkCanRenameColumn(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -271,10 +257,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns) {
+  public void checkCanSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanSelectFromColumns(identity, table, columns);
+      systemAccessControlImpl.checkCanSelectFromColumns(context, table, columns);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -285,10 +271,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanInsertIntoTable(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanInsertIntoTable(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanInsertIntoTable(identity, table);
+      systemAccessControlImpl.checkCanInsertIntoTable(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -299,10 +285,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanDeleteFromTable(Identity identity, CatalogSchemaTableName table) {
+  public void checkCanDeleteFromTable(SystemSecurityContext context, CatalogSchemaTableName table) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanDeleteFromTable(identity, table);
+      systemAccessControlImpl.checkCanDeleteFromTable(context, table);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -313,10 +299,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanCreateView(Identity identity, CatalogSchemaTableName view) {
+  public void checkCanCreateView(SystemSecurityContext context, CatalogSchemaTableName view) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanCreateView(identity, view);
+      systemAccessControlImpl.checkCanCreateView(context, view);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -327,10 +313,10 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanDropView(Identity identity, CatalogSchemaTableName view) {
+  public void checkCanDropView(SystemSecurityContext context, CatalogSchemaTableName view) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanDropView(identity, view);
+      systemAccessControlImpl.checkCanDropView(context, view);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
@@ -341,24 +327,24 @@ public class RangerSystemAccessControl
   }
 
   @Override
-  public void checkCanCreateViewWithSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns) {
+  public void checkCanCreateViewWithSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanCreateViewWithSelectFromColumns(identity, table, columns);
+      systemAccessControlImpl.checkCanCreateViewWithSelectFromColumns(context, table, columns);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
     } catch (Exception e) {
       deactivatePluginClassLoader();
-      AccessDeniedException.denyCreateViewWithSelect(table.getSchemaTableName().getTableName(), identity);
+      AccessDeniedException.denyCreateViewWithSelect(table.getSchemaTableName().getTableName(), context.getIdentity());
     }
   }
 
   @Override
-  public void checkCanSetCatalogSessionProperty(Identity identity, String catalogName, String propertyName) {
+  public void checkCanSetCatalogSessionProperty(SystemSecurityContext context, String catalogName, String propertyName) {
     try {
       activatePluginClassLoader();
-      systemAccessControlImpl.checkCanSetCatalogSessionProperty(identity, catalogName, propertyName);
+      systemAccessControlImpl.checkCanSetCatalogSessionProperty(context, catalogName, propertyName);
     } catch (AccessDeniedException e) {
       deactivatePluginClassLoader();
       throw e;
