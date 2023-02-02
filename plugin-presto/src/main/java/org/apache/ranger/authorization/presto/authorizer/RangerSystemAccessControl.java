@@ -344,11 +344,6 @@ public class RangerSystemAccessControl
     }
 
     @Override
-    public void checkCanReadSystemInformation(SystemSecurityContext context) {
-
-    }
-
-    @Override
     public void checkCanSetSchemaAuthorization(SystemSecurityContext context, CatalogSchemaName schema, PrestoPrincipal principal) {
         if (!hasPermission(createResource(schema.getCatalogName(), schema.getSchemaName()), context, PrestoAccessType.GRANT)) {
             LOG.debug("RangerSystemAccessControl.checkCanSetSchemaAuthorization(" + schema.getSchemaName() + ") denied");
@@ -374,14 +369,6 @@ public class RangerSystemAccessControl
 
     @Override
     public void checkCanSetTableComment(SystemSecurityContext context, CatalogSchemaTableName table) {
-        if (!hasPermission(createResource(table), context, PrestoAccessType.ALTER)) {
-            LOG.debug("RangerSystemAccessControl.checkCanSetTableComment(" + table.toString() + ") denied");
-            AccessDeniedException.denyCommentTable(table.toString());
-        }
-    }
-
-    @Override
-    public void checkCanSetColumnComment(SystemSecurityContext context, CatalogSchemaTableName table) {
         if (!hasPermission(createResource(table), context, PrestoAccessType.ALTER)) {
             LOG.debug("RangerSystemAccessControl.checkCanSetTableComment(" + table.toString() + ") denied");
             AccessDeniedException.denyCommentTable(table.toString());
