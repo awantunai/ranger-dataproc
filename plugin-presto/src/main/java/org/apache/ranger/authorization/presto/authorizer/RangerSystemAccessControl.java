@@ -553,7 +553,8 @@ public class RangerSystemAccessControl
                 resource,
                 userName,
                 userGroups,
-                accessType
+                accessType,
+                context
         );
 
         return request;
@@ -725,11 +726,15 @@ class RangerPrestoAccessRequest
     public RangerPrestoAccessRequest(RangerPrestoResource resource,
                                      String user,
                                      Set<String> userGroups,
-                                     PrestoAccessType prestoAccessType) {
+                                     PrestoAccessType prestoAccessType,
+                                     SystemSecurityContext context) {
         super(resource,
-                                prestoAccessType.name().toLowerCase(ENGLISH), user,
+                                prestoAccessType.name().toLowerCase(), user,
                 userGroups);
         setAccessTime(new Date());
+        if(context.getQueryId().isPresent()){
+            setRequestData(context.getQueryId().get().getId());
+        }
     }
 }
 
