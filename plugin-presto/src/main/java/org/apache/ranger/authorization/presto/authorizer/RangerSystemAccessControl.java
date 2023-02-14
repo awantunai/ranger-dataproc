@@ -38,8 +38,6 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.*;
 
-import static java.util.Locale.ENGLISH;
-
 public class RangerSystemAccessControl
         implements SystemAccessControl {
 
