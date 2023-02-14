@@ -547,6 +547,10 @@ public class RangerSystemAccessControl
             userGroups = context.getIdentity().getGroups();
         }
 
+        if(context.getQueryId().isPresent()){
+            LOG.debug("QueryId: " + context.getQueryId().get().getId());
+        }
+
         RangerPrestoAccessRequest request = new RangerPrestoAccessRequest(
                 resource,
                 userName,

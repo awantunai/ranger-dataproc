@@ -42,6 +42,7 @@
                             <include>io.airlift:log:jar:${presto.airlift.version}</include>
                             <include>io.airlift:log-manager:jar:${presto.airlift.version}</include>
                             <include>io.airlift:configuration:jar:${presto.airlift.version}</include>
+                            <include>javax.annotation:javax.annotation-api:jar:${javax.annotation-api.version}</include>
                             <include>javax.validation:validation-api:jar:${presto.validation-api.version}</include>
                             <include>javax.inject:javax.inject:jar:${javax-inject.version}</include>
                             <include>org.apache.bval:bval-jsr:jar:${presto.bval-jsr.version}</include>
